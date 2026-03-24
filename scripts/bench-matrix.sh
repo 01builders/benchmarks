@@ -2,8 +2,9 @@
 #
 # bench-matrix.sh — run a benchmark test across a matrix of configurations.
 #
-# each matrix entry runs as an independent go test invocation. between runs the
-# script runs an ansible playbook to reset the environment, then continues.
+# each matrix entry runs as an independent go test invocation. before each run
+# the script runs an ansible playbook to redeploy the chain with the correct
+# infrastructure config (block time, gas limit, etc).
 #
 # assumes external mode: BENCH_ETH_RPC_URL, BENCH_PRIVATE_KEY, and
 # BENCH_TRACE_QUERY_URL must be set (via .env or environment).
@@ -12,7 +13,7 @@
 #   ./scripts/bench-matrix.sh <test-name> <matrix.json> [options]
 #
 # options:
-#   --no-ansible          skip ansible cleanup between runs
+#   --no-ansible          skip ansible between runs
 #   --no-pause            don't wait for confirmation between runs
 #   --ansible-playbook P  path to ansible playbook (overrides ANSIBLE_PLAYBOOK)
 #   --ansible-inventory I ansible inventory (overrides ANSIBLE_INVENTORY)
@@ -35,7 +36,14 @@
 #     }
 #   ]
 #
-# requires: jq, go (with evm build tag support)
+# the script maps BENCH_* env vars to ansible extra vars automatically:
+#   BENCH_BLOCK_TIME       -> benchmarking_ev_node_block_time
+#   BENCH_GAS_LIMIT        -> benchmarking_ev_reth_gas_limit
+#   BENCH_SCRAPE_INTERVAL  -> benchmarking_ev_node_scrape_interval
+#   EV_NODE_TAG            -> benchmarking_ev_node_tag
+#   EV_RETH_TAG            -> benchmarking_ev_reth_tag
+#
+# requires: jq, go (with evm build tag support), ansible-playbook (unless --no-ansible)
 
 set -euo pipefail
 
@@ -120,16 +128,40 @@ PASSED=0
 FAILED=0
 SKIPPED=0
 
+# build_ansible_args reads BENCH_* env vars (already exported for this run)
+# and maps them to ansible extra vars for the play_benchmarks.yml playbook.
+build_ansible_args() {
+    local args=()
+    [[ -n "${BENCH_BLOCK_TIME:-}" ]]      && args+=(-e "benchmarking_ev_node_block_time=${BENCH_BLOCK_TIME}")
+    [[ -n "${BENCH_GAS_LIMIT:-}" ]]       && args+=(-e "benchmarking_ev_reth_gas_limit=${BENCH_GAS_LIMIT}")
+    [[ -n "${BENCH_SCRAPE_INTERVAL:-}" ]] && args+=(-e "benchmarking_ev_node_scrape_interval=${BENCH_SCRAPE_INTERVAL}")
+    [[ -n "${EV_NODE_TAG:-}" ]]           && args+=(-e "benchmarking_ev_node_tag=${EV_NODE_TAG}")
+    [[ -n "${EV_RETH_TAG:-}" ]]           && args+=(-e "benchmarking_ev_reth_tag=${EV_RETH_TAG}")
+    echo "${args[@]}"
+}
+
+# run_ansible redeploys the chain with infrastructure config from the current
+# run's env vars. this wipes existing state and starts fresh containers.
 run_ansible() {
-    echo ">>> running ansible cleanup..."
+    echo ">>> running ansible redeploy..."
     local cmd=(ansible-playbook "$PLAYBOOK")
     if [[ -n "$INVENTORY" ]]; then
         cmd+=(-i "$INVENTORY")
     fi
+
+    # map BENCH_* env vars to ansible extra vars
+    local extra_args
+    extra_args=$(build_ansible_args)
+    if [[ -n "$extra_args" ]]; then
+        # shellcheck disable=SC2086
+        cmd+=($extra_args)
+    fi
+
+    echo ">>> ansible command: ${cmd[*]}"
     if "${cmd[@]}"; then
-        echo ">>> ansible cleanup complete"
+        echo ">>> ansible redeploy complete"
     else
-        echo ">>> WARNING: ansible cleanup failed (exit code $?)"
+        echo ">>> WARNING: ansible redeploy failed (exit code $?)"
         if [[ "$PAUSE" == "true" ]]; then
             echo ">>> press Enter to continue anyway, or 'q' to quit"
             read -r REPLY
@@ -147,12 +179,7 @@ for i in $(seq 0 $((TOTAL - 1))); do
 
     echo "--- run $IDX/$TOTAL: $OBJECTIVE ---"
 
-    # run ansible cleanup before each run (including the first)
-    if [[ "$RUN_ANSIBLE" == "true" ]]; then
-        run_ansible
-    fi
-
-    # extract and display env vars for this run
+    # extract env vars for this run and export them so ansible can read them
     ENV_VARS=$(jq -r ".[$i].env // {} | to_entries[] | \"\(.key)=\(.value)\"" "$MATRIX_FILE")
 
     EXPORT_CMD=""
@@ -169,9 +196,16 @@ for i in $(seq 0 $((TOTAL - 1))); do
     echo "  output: $RESULT_FILE"
     echo ""
 
+    # export env vars before ansible so it picks up the infrastructure config
+    eval "$EXPORT_CMD"
+
+    # redeploy the chain with this run's infrastructure config
+    if [[ "$RUN_ANSIBLE" == "true" ]]; then
+        run_ansible
+    fi
+
     set +e
     (
-        eval "$EXPORT_CMD"
         export BENCH_OBJECTIVE="$OBJECTIVE"
         export BENCH_RESULT_OUTPUT="$RESULT_FILE"
         cd "${EV_NODE_DIR}/test/e2e"
