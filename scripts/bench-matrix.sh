@@ -158,10 +158,12 @@ run_ansible() {
     fi
 
     echo ">>> ansible command: ${cmd[*]}"
-    if "${cmd[@]}"; then
+    local rc=0
+    "${cmd[@]}" || rc=$?
+    if [[ $rc -eq 0 ]]; then
         echo ">>> ansible redeploy complete"
     else
-        echo ">>> WARNING: ansible redeploy failed (exit code $?)"
+        echo ">>> WARNING: ansible redeploy failed (exit code $rc)"
         if [[ "$PAUSE" == "true" ]]; then
             echo ">>> press Enter to continue anyway, or 'q' to quit"
             read -r REPLY
@@ -170,8 +172,19 @@ run_ansible() {
     fi
 }
 
+# BENCH_ENV_KEYS tracks which BENCH_* vars were exported so we can unset them
+# between runs to prevent config leaking from one matrix entry to the next.
+BENCH_ENV_KEYS=()
+
 for i in $(seq 0 $((TOTAL - 1))); do
     IDX=$((i + 1))
+
+    # unset env vars from the previous run
+    for key in "${BENCH_ENV_KEYS[@]}"; do
+        unset "$key"
+    done
+    BENCH_ENV_KEYS=()
+
     OBJECTIVE=$(jq -r ".[$i].objective // \"run_$IDX\"" "$MATRIX_FILE")
     TIMESTAMP=$(date +%Y%m%dT%H%M%S)
     RESULT_FILE="${RESULTS_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}.json"
@@ -186,6 +199,7 @@ for i in $(seq 0 $((TOTAL - 1))); do
     while IFS= read -r line; do
         if [[ -n "$line" ]]; then
             EXPORT_CMD="${EXPORT_CMD} export ${line};"
+            BENCH_ENV_KEYS+=("${line%%=*}")
         fi
     done <<< "$ENV_VARS"
 
