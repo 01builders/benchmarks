@@ -1,182 +1,197 @@
 [
   {
-    "objective": "baseline_30m_100ms",
+    "objective": "30m_10pct",
     "env": {
       "BENCH_BLOCK_TIME": "100ms",
       "BENCH_SLOT_DURATION": "100ms",
       "BENCH_GAS_LIMIT": "0x1C9C380",
       "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "2",
-      "BENCH_COUNT_PER_SPAMMER": "5000",
-      "BENCH_THROUGHPUT": "100",
-      "BENCH_WARMUP_TXS": "200",
-      "BENCH_MAX_WALLETS": "100",
+      "BENCH_NUM_SPAMMERS": "4",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "115",
+      "BENCH_WARMUP_TXS": "300",
+      "BENCH_MAX_WALLETS": "200",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "baseline_100m_100ms",
-    "env": {
-      "BENCH_BLOCK_TIME": "100ms",
-      "BENCH_SLOT_DURATION": "100ms",
-      "BENCH_GAS_LIMIT": "0x5F5E100",
-      "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "2",
-      "BENCH_COUNT_PER_SPAMMER": "5000",
-      "BENCH_THROUGHPUT": "100",
-      "BENCH_WARMUP_TXS": "200",
-      "BENCH_MAX_WALLETS": "100",
-      "BENCH_WAIT_TIMEOUT": "10m"
-    }
-  },
-  {
-    "objective": "low_load_30m",
-    "env": {
-      "BENCH_BLOCK_TIME": "100ms",
-      "BENCH_SLOT_DURATION": "100ms",
-      "BENCH_GAS_LIMIT": "0x1C9C380",
-      "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "1",
-      "BENCH_COUNT_PER_SPAMMER": "5000",
-      "BENCH_THROUGHPUT": "20",
-      "BENCH_WARMUP_TXS": "100",
-      "BENCH_MAX_WALLETS": "50",
-      "BENCH_WAIT_TIMEOUT": "10m"
-    }
-  },
-  {
-    "objective": "saturate_30m",
+    "objective": "30m_20pct",
     "env": {
       "BENCH_BLOCK_TIME": "100ms",
       "BENCH_SLOT_DURATION": "100ms",
       "BENCH_GAS_LIMIT": "0x1C9C380",
       "BENCH_SCRAPE_INTERVAL": "25ms",
       "BENCH_NUM_SPAMMERS": "6",
-      "BENCH_COUNT_PER_SPAMMER": "20000",
-      "BENCH_THROUGHPUT": "200",
+      "BENCH_COUNT_PER_SPAMMER": "15000",
+      "BENCH_THROUGHPUT": "155",
       "BENCH_WARMUP_TXS": "500",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "10m"
+    }
+  },
+  {
+    "objective": "30m_40pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "22000",
+      "BENCH_THROUGHPUT": "230",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "10m"
+    }
+  },
+  {
+    "objective": "30m_80pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "35000",
+      "BENCH_THROUGHPUT": "370",
+      "BENCH_WARMUP_TXS": "1000",
       "BENCH_MAX_WALLETS": "500",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "saturate_100m",
+    "objective": "30m_100pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "45000",
+      "BENCH_THROUGHPUT": "460",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_MAX_WALLETS": "500",
+      "BENCH_WAIT_TIMEOUT": "10m"
+    }
+  },
+  {
+    "objective": "30m_120pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "55000",
+      "BENCH_THROUGHPUT": "550",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_MAX_WALLETS": "500",
+      "BENCH_WAIT_TIMEOUT": "10m"
+    }
+  },
+  {
+    "objective": "100m_10pct",
     "env": {
       "BENCH_BLOCK_TIME": "100ms",
       "BENCH_SLOT_DURATION": "100ms",
       "BENCH_GAS_LIMIT": "0x5F5E100",
       "BENCH_SCRAPE_INTERVAL": "25ms",
       "BENCH_NUM_SPAMMERS": "8",
-      "BENCH_COUNT_PER_SPAMMER": "20000",
-      "BENCH_THROUGHPUT": "200",
+      "BENCH_COUNT_PER_SPAMMER": "18000",
+      "BENCH_THROUGHPUT": "190",
       "BENCH_WARMUP_TXS": "500",
-      "BENCH_MAX_WALLETS": "500",
+      "BENCH_MAX_WALLETS": "400",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "saturate_300m",
+    "objective": "100m_20pct",
     "env": {
       "BENCH_BLOCK_TIME": "100ms",
       "BENCH_SLOT_DURATION": "100ms",
-      "BENCH_GAS_LIMIT": "0x11E1A300",
+      "BENCH_GAS_LIMIT": "0x5F5E100",
       "BENCH_SCRAPE_INTERVAL": "25ms",
       "BENCH_NUM_SPAMMERS": "10",
       "BENCH_COUNT_PER_SPAMMER": "30000",
-      "BENCH_THROUGHPUT": "200",
-      "BENCH_WARMUP_TXS": "500",
+      "BENCH_THROUGHPUT": "310",
+      "BENCH_WARMUP_TXS": "1000",
       "BENCH_MAX_WALLETS": "500",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "many_wallets_100m",
+    "objective": "100m_40pct",
     "env": {
       "BENCH_BLOCK_TIME": "100ms",
       "BENCH_SLOT_DURATION": "100ms",
       "BENCH_GAS_LIMIT": "0x5F5E100",
       "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "4",
-      "BENCH_COUNT_PER_SPAMMER": "10000",
-      "BENCH_THROUGHPUT": "100",
-      "BENCH_WARMUP_TXS": "300",
-      "BENCH_MAX_WALLETS": "2000",
-      "BENCH_WAIT_TIMEOUT": "10m"
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "60000",
+      "BENCH_THROUGHPUT": "615",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_MAX_WALLETS": "500",
+      "BENCH_WAIT_TIMEOUT": "15m"
     }
   },
   {
-    "objective": "few_wallets_100m",
-    "env": {
-      "BENCH_BLOCK_TIME": "100ms",
-      "BENCH_SLOT_DURATION": "100ms",
-      "BENCH_GAS_LIMIT": "0x5F5E100",
-      "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "4",
-      "BENCH_COUNT_PER_SPAMMER": "10000",
-      "BENCH_THROUGHPUT": "100",
-      "BENCH_WARMUP_TXS": "300",
-      "BENCH_MAX_WALLETS": "20",
-      "BENCH_WAIT_TIMEOUT": "10m"
-    }
-  },
-  {
-    "objective": "fast_blocks_50ms_100m",
+    "objective": "30m_40pct_50ms",
     "env": {
       "BENCH_BLOCK_TIME": "50ms",
       "BENCH_SLOT_DURATION": "50ms",
-      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
       "BENCH_SCRAPE_INTERVAL": "10ms",
-      "BENCH_NUM_SPAMMERS": "4",
-      "BENCH_COUNT_PER_SPAMMER": "10000",
-      "BENCH_THROUGHPUT": "200",
-      "BENCH_WARMUP_TXS": "300",
-      "BENCH_MAX_WALLETS": "200",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "22000",
+      "BENCH_THROUGHPUT": "230",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_MAX_WALLETS": "400",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "slow_blocks_250ms_100m",
+    "objective": "30m_40pct_250ms",
     "env": {
       "BENCH_BLOCK_TIME": "250ms",
       "BENCH_SLOT_DURATION": "250ms",
-      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
       "BENCH_SCRAPE_INTERVAL": "50ms",
-      "BENCH_NUM_SPAMMERS": "4",
-      "BENCH_COUNT_PER_SPAMMER": "10000",
-      "BENCH_THROUGHPUT": "100",
-      "BENCH_WARMUP_TXS": "200",
-      "BENCH_MAX_WALLETS": "200",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "22000",
+      "BENCH_THROUGHPUT": "230",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_MAX_WALLETS": "400",
       "BENCH_WAIT_TIMEOUT": "10m"
     }
   },
   {
-    "objective": "slow_blocks_1s_300m",
+    "objective": "30m_40pct_500ms",
+    "env": {
+      "BENCH_BLOCK_TIME": "500ms",
+      "BENCH_SLOT_DURATION": "500ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "100ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "22000",
+      "BENCH_THROUGHPUT": "230",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "10m"
+    }
+  },
+  {
+    "objective": "30m_40pct_1s",
     "env": {
       "BENCH_BLOCK_TIME": "1s",
       "BENCH_SLOT_DURATION": "1s",
-      "BENCH_GAS_LIMIT": "0x11E1A300",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
       "BENCH_SCRAPE_INTERVAL": "200ms",
-      "BENCH_NUM_SPAMMERS": "6",
-      "BENCH_COUNT_PER_SPAMMER": "10000",
-      "BENCH_THROUGHPUT": "50",
-      "BENCH_WARMUP_TXS": "200",
-      "BENCH_MAX_WALLETS": "200",
-      "BENCH_WAIT_TIMEOUT": "10m"
-    }
-  },
-  {
-    "objective": "max_tps_500m",
-    "env": {
-      "BENCH_BLOCK_TIME": "100ms",
-      "BENCH_SLOT_DURATION": "100ms",
-      "BENCH_GAS_LIMIT": "0x1DCD6500",
-      "BENCH_SCRAPE_INTERVAL": "25ms",
-      "BENCH_NUM_SPAMMERS": "10",
-      "BENCH_COUNT_PER_SPAMMER": "30000",
-      "BENCH_THROUGHPUT": "200",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "22000",
+      "BENCH_THROUGHPUT": "230",
       "BENCH_WARMUP_TXS": "500",
-      "BENCH_MAX_WALLETS": "500",
-      "BENCH_WAIT_TIMEOUT": "15m"
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "10m"
     }
   }
 ]
