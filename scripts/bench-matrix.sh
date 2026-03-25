@@ -163,7 +163,7 @@ build_ansible_args() {
     [[ -n "${BENCH_SCRAPE_INTERVAL:-}" ]] && args+=(-e "benchmarking_ev_node_scrape_interval=${BENCH_SCRAPE_INTERVAL}")
     [[ -n "${EV_NODE_TAG:-}" ]]           && args+=(-e "benchmarking_ev_node_tag=${EV_NODE_TAG}")
     [[ -n "${EV_RETH_TAG:-}" ]]           && args+=(-e "benchmarking_ev_reth_tag=${EV_RETH_TAG}")
-    echo "${args[@]}"
+    printf '%s ' "${args[@]}"
 }
 
 # run_ansible redeploys the chain with infrastructure config from the current
