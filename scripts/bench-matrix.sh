@@ -6,6 +6,9 @@
 # the script runs an ansible playbook to redeploy the chain with the correct
 # infrastructure config (block time, gas limit, etc).
 #
+# the script runs on the orchestrator but executes tests on a remote node
+# (the test runner) via SSH.
+#
 # assumes external mode: BENCH_ETH_RPC_URL, BENCH_PRIVATE_KEY, and
 # BENCH_TRACE_QUERY_URL must be set (via .env or environment).
 #
@@ -17,10 +20,13 @@
 #   --no-pause            don't wait for confirmation between runs
 #   --ansible-playbook P  path to ansible playbook (overrides ANSIBLE_PLAYBOOK)
 #   --ansible-inventory I ansible inventory (overrides ANSIBLE_INVENTORY)
-#   --results-dir DIR     output directory for results (default: ./results)
+#   --results-dir DIR     local output directory for results (default: ./results)
 #   --timeout DUR         go test timeout per run (default: 15m)
-#   --ev-node-dir DIR     path to ev-node checkout (default: ~/checkouts/evstack/ev-node)
+#   --ev-node-dir DIR     path to ev-node checkout on the test runner (default: /root/ev-node)
 #   --env-file FILE       .env file to source base config from
+#   --limit N             only run the first N matrix entries (useful for testing)
+#   --test-runner HOST    SSH host for the test runner node (required)
+#   --test-runner-user U  SSH user for the test runner (default: root)
 #
 # matrix.json format:
 #   [
@@ -43,7 +49,8 @@
 #   EV_NODE_TAG            -> benchmarking_ev_node_tag
 #   EV_RETH_TAG            -> benchmarking_ev_reth_tag
 #
-# requires: jq, go (with evm build tag support), ansible-playbook (unless --no-ansible)
+# requires: jq, ssh, ansible-playbook (unless --no-ansible)
+# requires on test runner: go (with evm build tag support), ev-node checkout
 
 set -euo pipefail
 
@@ -63,8 +70,11 @@ RUN_ANSIBLE=true
 PAUSE=true
 RESULTS_DIR="./results"
 TIMEOUT="15m"
-EV_NODE_DIR="${HOME}/checkouts/evstack/ev-node"
+EV_NODE_DIR="/root/ev-node"
 ENV_FILE=""
+LIMIT=0
+TEST_RUNNER=""
+TEST_RUNNER_USER="root"
 PLAYBOOK="${ANSIBLE_PLAYBOOK:-}"
 INVENTORY="${ANSIBLE_INVENTORY:-}"
 
@@ -78,12 +88,16 @@ while [[ $# -gt 0 ]]; do
         --timeout)            TIMEOUT="$2"; shift 2 ;;
         --ev-node-dir)        EV_NODE_DIR="$2"; shift 2 ;;
         --env-file)           ENV_FILE="$2"; shift 2 ;;
+        --limit)              LIMIT="$2"; shift 2 ;;
+        --test-runner)        TEST_RUNNER="$2"; shift 2 ;;
+        --test-runner-user)   TEST_RUNNER_USER="$2"; shift 2 ;;
         *)                    die "unknown option: $1" ;;
     esac
 done
 
 command -v jq &>/dev/null || die "jq is required but not installed"
 [[ -f "$MATRIX_FILE" ]] || die "matrix file not found: $MATRIX_FILE"
+[[ -n "$TEST_RUNNER" ]] || die "--test-runner is required"
 
 if [[ "$RUN_ANSIBLE" == "true" ]]; then
     [[ -n "$PLAYBOOK" ]] || die "ansible enabled but no playbook specified (use --ansible-playbook or ANSIBLE_PLAYBOOK)"
@@ -91,8 +105,19 @@ if [[ "$RUN_ANSIBLE" == "true" ]]; then
     command -v ansible-playbook &>/dev/null || die "ansible-playbook is required but not installed"
 fi
 
+SSH_TARGET="${TEST_RUNNER_USER}@${TEST_RUNNER}"
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o BatchMode=yes)
+
+run_remote() {
+    ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$@"
+}
+
 TOTAL=$(jq 'length' "$MATRIX_FILE")
 [[ "$TOTAL" -gt 0 ]] || die "matrix is empty"
+
+if [[ "$LIMIT" -gt 0 && "$LIMIT" -lt "$TOTAL" ]]; then
+    TOTAL="$LIMIT"
+fi
 
 # source base env if provided
 if [[ -n "$ENV_FILE" ]]; then
@@ -111,16 +136,17 @@ fi
 mkdir -p "$RESULTS_DIR"
 
 echo "=== bench-matrix ==="
-echo "test:       TestSpamoorSuite/$TEST_NAME"
-echo "matrix:     $MATRIX_FILE ($TOTAL entries)"
-echo "results:    $RESULTS_DIR/"
-echo "timeout:    $TIMEOUT"
-echo "ev-node:    $EV_NODE_DIR"
-echo "rpc:        $BENCH_ETH_RPC_URL"
-echo "ansible:    $RUN_ANSIBLE"
+echo "test:         TestSpamoorSuite/$TEST_NAME"
+echo "matrix:       $MATRIX_FILE ($TOTAL entries)"
+echo "results:      $RESULTS_DIR/"
+echo "timeout:      $TIMEOUT"
+echo "test runner:  $SSH_TARGET"
+echo "ev-node:      $EV_NODE_DIR (on test runner)"
+echo "rpc:          $BENCH_ETH_RPC_URL"
+echo "ansible:      $RUN_ANSIBLE"
 if [[ "$RUN_ANSIBLE" == "true" ]]; then
-    echo "  playbook:  $PLAYBOOK"
-    echo "  inventory: ${INVENTORY:-<default>}"
+    echo "  playbook:   $PLAYBOOK"
+    echo "  inventory:  ${INVENTORY:-<default>}"
 fi
 echo ""
 
@@ -218,16 +244,30 @@ for i in $(seq 0 $((TOTAL - 1))); do
         run_ansible
     fi
 
+    REMOTE_RESULT="/tmp/bench_result_${TIMESTAMP}.json"
+
+    # build env var exports for the remote shell
+    REMOTE_ENV="export BENCH_OBJECTIVE='${OBJECTIVE}';"
+    REMOTE_ENV+=" export BENCH_RESULT_OUTPUT='${REMOTE_RESULT}';"
+    REMOTE_ENV+=" export BENCH_ETH_RPC_URL='${BENCH_ETH_RPC_URL}';"
+    REMOTE_ENV+=" export BENCH_PRIVATE_KEY='${BENCH_PRIVATE_KEY}';"
+    REMOTE_ENV+=" export BENCH_TRACE_QUERY_URL='${BENCH_TRACE_QUERY_URL}';"
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            REMOTE_ENV+=" export ${line};"
+        fi
+    done <<< "$ENV_VARS"
+
     set +e
-    (
-        export BENCH_OBJECTIVE="$OBJECTIVE"
-        export BENCH_RESULT_OUTPUT="$RESULT_FILE"
-        cd "${EV_NODE_DIR}/test/e2e"
+    run_remote bash -lc "'
+        ${REMOTE_ENV}
+        export PATH=/snap/bin:\$PATH;
+        cd ${EV_NODE_DIR}/test/e2e &&
         go test -tags evm \
-            -run "^TestSpamoorSuite\$/^${TEST_NAME}\$" \
-            -v -count=1 -timeout "$TIMEOUT" \
+            -run \"^TestSpamoorSuite\\\$/^${TEST_NAME}\\\$\" \
+            -v -count=1 -timeout ${TIMEOUT} \
             ./benchmark/...
-    ) 2>&1 | tee "$LOG_FILE"
+    '" 2>&1 | tee "$LOG_FILE"
     EXIT_CODE=${PIPESTATUS[0]}
     set -e
 
@@ -238,6 +278,10 @@ for i in $(seq 0 $((TOTAL - 1))); do
         echo "  status: FAIL (exit code $EXIT_CODE)"
         FAILED=$((FAILED + 1))
     fi
+
+    # fetch result file from test runner
+    scp "${SSH_OPTS[@]}" "${SSH_TARGET}:${REMOTE_RESULT}" "$RESULT_FILE" 2>/dev/null && \
+        run_remote rm -f "$REMOTE_RESULT" 2>/dev/null
 
     if [[ -f "$RESULT_FILE" ]]; then
         MGAS=$(jq -r '.metrics.mgas_per_sec // "n/a"' "$RESULT_FILE")
