@@ -476,6 +476,31 @@ At 50ms, ProduceBlock avg (40ms) nearly fills the entire interval, leaving no he
 
 The 250ms block time appears to be the sweet spot for this workload: high non-empty ratio, best absolute throughput, and reasonable overhead. The 10s ProduceBlock max spikes seen at 50-250ms (but absent at 500ms-1s) suggest that block production occasionally stalls for ~10 seconds, likely from execution retries or GC pauses.
 
+### target vs actual utilization
+
+The "utilization" label on each scenario (10%, 40%, 80%, etc.) is the **target injection rate**, not measured block fill. Actual utilization is `avg_gas_per_block / gas_limit`:
+
+| Scenario (target) | Gas Limit | Avg Gas/Block | Actual Utilization |
+|---|---|---|---|
+| 30m_10pct | 30M | 2,957,735 | 9.9% |
+| 30m_20pct | 30M | 2,858,257 | 9.5% |
+| 30m_40pct | 30M | 2,612,058 | 8.7% |
+| 30m_80pct | 30M | 1,417,294 | 4.7% |
+| 100m_10pct | 100M | 2,069,337 | 2.1% |
+| 100m_20pct | 100M | 2,385,663 | 2.4% |
+| 100m_40pct | 100M | 1,947,325 | 1.9% |
+
+Actual utilization is far below target in every case. At "80% target" (30M) the system achieves only ~5% block fill. The system produces many blocks but can't pack them full within the block time window.
+
+Factors limiting actual utilization:
+
+- **ERC-20 tx size.** At ~65k gas/tx, filling 40% of a 30M block requires ~185 txs per block, or ~1,850 tx/s sustained injection. Per-tx overhead in block building dominates when txs are small.
+- **Block building deadline.** If ev-node calls GetPayload before reth has had time to pack the block, blocks are returned partially filled. The time budget between ForkchoiceUpdated and GetPayload determines how many txs reth can include.
+- **RPC ingestion rate.** The sequencer's connection/rate limits cap how fast txs enter the mempool. At high injection rates, 429 responses and context cancellations reduce the effective delivery rate below the configured throughput.
+- **Wallet nonce sequencing.** Txs from the same sender are nonce-ordered. More wallets allow more parallel tx streams for reth to draw from during block building.
+
+The GasBurner test (1M gas/tx, ~30 txs to fill a 30M block) will help isolate whether the bottleneck is per-tx overhead or block building pipeline timing. If GasBurner achieves significantly higher actual utilization at the same config, the issue is small-tx packing throughput.
+
 ### key takeaways
 
 1. **100ms block time is too aggressive for high utilization.** Overhead exceeds 50% by 40% utilization, and the system fails entirely at 100%.
