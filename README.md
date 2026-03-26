@@ -2,6 +2,8 @@
 
 Tooling and recorded results for ev-node performance benchmarking.
 
+The goal of this repo is to produce data that informs optimal ev-node/ev-reth configuration for chains with a given set of requirements (expected load, block time, gas limit). By running standardized workloads across a matrix of configurations, we can identify which settings deliver the best throughput, stability, and resource efficiency for a target utilization level.
+
 ## objectives
 
 The benchmark suite answers: "at a given block utilization level, what throughput, latency, and stability should an operator expect?"
@@ -95,32 +97,7 @@ The script will refuse to run if either is missing.
 
 ### examples
 
-```bash
-# run a full matrix (pauses between runs for operator confirmation)
-./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
-  --test-runner <host> \
-  --env-file .env
-
-# run without pausing between runs
-./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
-  --test-runner <host> \
-  --env-file .env \
-  --no-pause
-
-# run only the first 3 entries (for testing)
-./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
-  --test-runner <host> \
-  --env-file .env \
-  --limit 3
-
-# skip ansible redeploy (if chain is already configured)
-./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
-  --test-runner <host> \
-  --env-file .env \
-  --no-ansible
-```
-
-Test names for each matrix:
+All commands assume running from the orchestrator (`/srv/benchmarking-runner/benchmarks`).
 
 | Matrix | Test Name |
 |--------|-----------|
@@ -129,6 +106,78 @@ Test names for each matrix:
 | defi-simulation.json | TestDeFiSimulation |
 | state-pressure.json | TestStatePressure |
 | spamoor-smoke.json | TestSpamoorSmoke |
+
+#### full matrix runs
+
+```bash
+# gas burner
+./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --no-pause
+
+# erc20 throughput
+./scripts/bench-matrix.sh TestERC20Throughput matrices/erc20-throughput.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --no-pause
+
+# defi simulation (longer timeout for high-utilization configs)
+./scripts/bench-matrix.sh TestDeFiSimulation matrices/defi-simulation.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --timeout 35m \
+  --no-pause
+
+# state pressure
+./scripts/bench-matrix.sh TestStatePressure matrices/state-pressure.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --no-pause
+
+# smoke test
+./scripts/bench-matrix.sh TestSpamoorSmoke matrices/spamoor-smoke.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --no-pause
+```
+
+#### partial runs and debugging
+
+```bash
+# run only the first entry to verify config changes
+./scripts/bench-matrix.sh TestDeFiSimulation matrices/defi-simulation.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --limit 1
+
+# run first 3 entries with pauses between runs
+./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --ansible-playbook ../ansible/play_benchmarks.yml \
+  --ansible-inventory ../ansible/inventory/hosts.yml \
+  --limit 3
+
+# skip ansible redeploy (chain already configured)
+./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
+  --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --env-file .env \
+  --no-ansible \
+  --no-pause
+```
 
 ## generating reports
 
