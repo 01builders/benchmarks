@@ -133,16 +133,31 @@ fi
 [[ -n "${BENCH_PRIVATE_KEY:-}" ]] || die "BENCH_PRIVATE_KEY must be set (external mode)"
 [[ -n "${BENCH_TRACE_QUERY_URL:-}" ]] || die "BENCH_TRACE_QUERY_URL must be set (external mode)"
 
-mkdir -p "$RESULTS_DIR"
+# validate version tags (used for results directory and result JSON metadata)
+[[ -n "${EV_RETH_TAG:-}" ]] || die "EV_RETH_TAG must be set (e.g. v0.3.1, latest)"
+[[ -n "${EV_NODE_TAG:-}" ]] || die "EV_NODE_TAG must be set (e.g. v1.0.0, abc1234)"
+
+# sanitize a tag value for use in directory names (replace non-alphanumeric chars with -)
+sanitize_tag() {
+    echo "$1" | tr -c '[:alnum:]._-' '-' | sed 's/^-//;s/-$//'
+}
+
+# build versioned results directory: results/{ev_reth_tag}_{ev_node_tag}/
+RETH_TAG=$(sanitize_tag "$EV_RETH_TAG")
+NODE_TAG=$(sanitize_tag "$EV_NODE_TAG")
+RUN_DIR="${RESULTS_DIR}/evreth-${RETH_TAG}_evnode-${NODE_TAG}"
+mkdir -p "$RUN_DIR"
 
 echo "=== bench-matrix ==="
 echo "test:         TestSpamoorSuite/$TEST_NAME"
 echo "matrix:       $MATRIX_FILE ($TOTAL entries)"
-echo "results:      $RESULTS_DIR/"
+echo "results:      $RUN_DIR/"
 echo "timeout:      $TIMEOUT"
 echo "test runner:  $SSH_TARGET"
 echo "ev-node:      $EV_NODE_DIR (on test runner)"
 echo "rpc:          $BENCH_ETH_RPC_URL"
+echo "ev-reth tag:  $RETH_TAG"
+echo "ev-node tag:  $NODE_TAG"
 echo "ansible:      $RUN_ANSIBLE"
 if [[ "$RUN_ANSIBLE" == "true" ]]; then
     echo "  playbook:   $PLAYBOOK"
@@ -213,8 +228,8 @@ for i in $(seq 0 $((TOTAL - 1))); do
 
     OBJECTIVE=$(jq -r ".[$i].objective // \"run_$IDX\"" "$MATRIX_FILE")
     TIMESTAMP=$(date +%Y%m%dT%H%M%S)
-    RESULT_FILE="${RESULTS_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}.json"
-    LOG_FILE="${RESULTS_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}.log"
+    RESULT_FILE="${RUN_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}.json"
+    LOG_FILE="${RUN_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}.log"
 
     echo "--- run $IDX/$TOTAL: $OBJECTIVE ---"
 
@@ -252,6 +267,8 @@ for i in $(seq 0 $((TOTAL - 1))); do
     REMOTE_ENV+=" export BENCH_ETH_RPC_URL='${BENCH_ETH_RPC_URL}';"
     REMOTE_ENV+=" export BENCH_PRIVATE_KEY='${BENCH_PRIVATE_KEY}';"
     REMOTE_ENV+=" export BENCH_TRACE_QUERY_URL='${BENCH_TRACE_QUERY_URL}';"
+    REMOTE_ENV+=" export EV_NODE_TAG='${EV_NODE_TAG:-}';"
+    REMOTE_ENV+=" export EV_RETH_TAG='${EV_RETH_TAG:-}';"
     while IFS= read -r line; do
         if [[ -n "$line" ]]; then
             REMOTE_ENV+=" export ${line};"
@@ -309,4 +326,4 @@ echo "total:   $TOTAL"
 echo "passed:  $PASSED"
 echo "failed:  $FAILED"
 echo "skipped: $SKIPPED"
-echo "results: $RESULTS_DIR/"
+echo "results: $RUN_DIR/"

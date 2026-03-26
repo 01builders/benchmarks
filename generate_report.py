@@ -9,10 +9,12 @@ from pathlib import Path
 
 def load_results(results_dir: Path) -> list[dict]:
     results = []
-    for f in sorted(results_dir.glob("*.json")):
+    for f in sorted(results_dir.rglob("*.json")):
+        if f.name == ".gitkeep":
+            continue
         with open(f) as fp:
             data = json.load(fp)
-            data["_filename"] = f.name
+            data["_filename"] = str(f.relative_to(results_dir))
             results.append(data)
     # sort by timestamp
     results.sort(key=lambda r: r.get("timestamp", ""))
@@ -171,19 +173,23 @@ def generate_report(results: list[dict]) -> str:
 
 
 def main():
-    results_dir = Path(__file__).parent / "results"
+    if len(sys.argv) > 1:
+        results_dir = Path(sys.argv[1])
+    else:
+        results_dir = Path(__file__).parent / "results"
+
     if not results_dir.is_dir():
         print(f"error: results directory not found: {results_dir}", file=sys.stderr)
         sys.exit(1)
 
     results = load_results(results_dir)
     if not results:
-        print("error: no JSON result files found", file=sys.stderr)
+        print(f"error: no JSON result files found in {results_dir}", file=sys.stderr)
         sys.exit(1)
 
     report = generate_report(results)
 
-    output_path = Path(__file__).parent / "report.md"
+    output_path = results_dir / "report.md"
     output_path.write_text(report)
     print(f"wrote {output_path} ({len(results)} scenarios)")
 

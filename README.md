@@ -76,6 +76,25 @@ Sanity checks across gas limits and block times. Not intended for performance me
 
 ## running
 
+### version tags
+
+Every run requires `EV_RETH_TAG` and `EV_NODE_TAG` to be set. These are used to:
+
+1. name the results directory (`results/evreth-{tag}_evnode-{tag}/`)
+2. tag each result JSON file (`tags.ev_reth`, `tags.ev_node`) so results are traceable to exact builds
+3. pass to ansible for infrastructure deployment
+
+Set them in your `.env` file or export them directly:
+
+```bash
+export EV_RETH_TAG=v0.3.1
+export EV_NODE_TAG=v1.0.0
+```
+
+The script will refuse to run if either is missing.
+
+### examples
+
 ```bash
 # run a full matrix (pauses between runs for operator confirmation)
 ./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
@@ -114,13 +133,29 @@ Test names for each matrix:
 ## generating reports
 
 ```bash
-python3 generate_report.py
+# generate report for a specific version combo
+python3 generate_report.py results/evreth-v0.3.1_evnode-abc1234
+
+# generate report across all results (recursive scan)
+python3 generate_report.py results
 ```
 
-Reads all `*.json` files from `results/` and writes `report.md` with summary tables, block production timing, per-block distribution, and per-scenario detail sections.
+Reads all `*.json` files (recursively) from the given directory and writes `report.md` into that directory.
 
 ## results
 
-Results are stored in `results/` as JSON files (structured metrics) and log files (raw test output). JSON files are committed; log files are gitignored.
+Results are organized by version combo:
+
+```
+results/
+  evreth-{tag}_evnode-{tag}/
+    TestGasBurner_{objective}_{timestamp}.json
+    TestGasBurner_{objective}_{timestamp}.log
+    TestERC20Throughput_{objective}_{timestamp}.json
+    ...
+    report.md
+```
+
+The directory is created automatically by `bench-matrix.sh` from the `EV_RETH_TAG` and `EV_NODE_TAG` environment variables. JSON files are committed; log files are gitignored.
 
 Each result file contains: test config, host environment, throughput metrics (Mgas/s, TPS, blocks/s), block production timing (ProduceBlock, GetPayload, NewPayload), per-block gas/tx distributions (avg, p50, p99), and spamoor send/fail counts.
