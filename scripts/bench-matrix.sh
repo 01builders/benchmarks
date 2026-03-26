@@ -296,6 +296,14 @@ for i in $(seq 0 $((TOTAL - 1))); do
         FAILED=$((FAILED + 1))
     fi
 
+    # clean up any containers left behind by tastora/spamoor to prevent
+    # name conflicts on the next run
+    run_remote bash -c "'
+        docker ps -a --filter label=tastora --format {{.ID}} | xargs -r docker rm -f 2>/dev/null
+        docker ps -a --filter name=spamoor --format {{.ID}} | xargs -r docker rm -f 2>/dev/null
+    '" 2>/dev/null || true
+    echo "  cleanup: removed stale test containers"
+
     # fetch result file from test runner
     scp "${SSH_OPTS[@]}" "${SSH_TARGET}:${REMOTE_RESULT}" "$RESULT_FILE" 2>/dev/null && \
         run_remote rm -f "$REMOTE_RESULT" 2>/dev/null
