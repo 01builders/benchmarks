@@ -259,6 +259,12 @@ for i in $(seq 0 $((TOTAL - 1))); do
         run_ansible
     fi
 
+    # clean up stale containers before the test to prevent name conflicts
+    run_remote bash -c "'
+        docker ps -a --filter label=tastora --format {{.ID}} | xargs -r docker rm -f 2>/dev/null
+        docker ps -a --filter name=spamoor --format {{.ID}} | xargs -r docker rm -f 2>/dev/null
+    '" 2>/dev/null || true
+
     REMOTE_RESULT="/tmp/bench_result_${TIMESTAMP}.json"
 
     # build env var exports for the remote shell
