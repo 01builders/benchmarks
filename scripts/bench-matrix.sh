@@ -348,6 +348,15 @@ for i in $(seq 0 $((TOTAL - 1))); do
         FAILED=$((FAILED + 1))
     fi
 
+    # list containers on chain hosts for debugging
+    for host in "${CHAIN_HOSTS[@]}"; do
+        echo "  containers on $host:"
+        run_on_chain_host "$host" docker ps -a --format "'  {{.Names}} ({{.Status}})'" 2>/dev/null || echo "    <unreachable>"
+    done
+
+    # collect container logs before cleanup destroys them
+    collect_chain_logs "${RUN_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}"
+
     # clean up any containers left behind by tastora/spamoor to prevent
     # name conflicts on the next run
     run_remote bash -c "'
@@ -366,9 +375,6 @@ for i in $(seq 0 $((TOTAL - 1))); do
     else
         echo "  warning: no result file written"
     fi
-
-    # collect ev-reth and ev-node container logs from chain hosts
-    collect_chain_logs "${RUN_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}"
 
     echo ""
 
