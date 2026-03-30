@@ -27,6 +27,8 @@
 #   --limit N             only run the first N matrix entries (useful for testing)
 #   --test-runner HOST    SSH host for the test runner node (required)
 #   --test-runner-user U  SSH user for the test runner (default: root)
+#   --chain-host HOST     SSH host running ev-reth/ev-node (repeatable, for log collection)
+#   --chain-host-user U   SSH user for chain hosts (default: root)
 #
 # matrix.json format:
 #   [
@@ -75,6 +77,8 @@ ENV_FILE=""
 LIMIT=0
 TEST_RUNNER=""
 TEST_RUNNER_USER="root"
+CHAIN_HOSTS=()
+CHAIN_HOST_USER="root"
 PLAYBOOK="${ANSIBLE_PLAYBOOK:-}"
 INVENTORY="${ANSIBLE_INVENTORY:-}"
 
@@ -91,6 +95,8 @@ while [[ $# -gt 0 ]]; do
         --limit)              LIMIT="$2"; shift 2 ;;
         --test-runner)        TEST_RUNNER="$2"; shift 2 ;;
         --test-runner-user)   TEST_RUNNER_USER="$2"; shift 2 ;;
+        --chain-host)         CHAIN_HOSTS+=("$2"); shift 2 ;;
+        --chain-host-user)    CHAIN_HOST_USER="$2"; shift 2 ;;
         *)                    die "unknown option: $1" ;;
     esac
 done
@@ -111,6 +117,45 @@ SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o BatchMode=yes)
 run_remote() {
     ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "$@"
 }
+
+run_on_chain_host() {
+    local host="$1"; shift
+    ssh "${SSH_OPTS[@]}" "${CHAIN_HOST_USER}@${host}" "$@"
+}
+
+# collect_chain_logs fetches ev-reth and ev-node docker logs from all
+# chain hosts (sequencer + fullnodes) into the results directory.
+collect_chain_logs() {
+    local prefix="$1"
+    if [[ ${#CHAIN_HOSTS[@]} -eq 0 ]]; then
+        return
+    fi
+    echo "  collecting container logs..."
+    for host in "${CHAIN_HOSTS[@]}"; do
+        for container in ev-reth ev-node; do
+            local log_file="${prefix}_${host}_${container}.log"
+            run_on_chain_host "$host" docker logs "$container" > "$log_file" 2>&1 || {
+                echo "  warning: failed to collect $container logs from $host"
+                rm -f "$log_file"
+            }
+        done
+    done
+}
+
+# liveness check: verify SSH and docker are reachable on all hosts
+echo ">>> verifying host connectivity..."
+run_remote docker info &>/dev/null || die "cannot reach docker on test runner ($SSH_TARGET)"
+echo "  test runner ($TEST_RUNNER): ok"
+for host in "${CHAIN_HOSTS[@]}"; do
+    run_on_chain_host "$host" docker info &>/dev/null || die "cannot reach docker on chain host ($host)"
+    echo "  chain host ($host): ok"
+    for container in ev-reth ev-node; do
+        cstatus=$(run_on_chain_host "$host" docker inspect --format \
+            "'{{.State.Status}} | image: {{.Config.Image}} | started: {{.State.StartedAt}}'" \
+            "$container" 2>/dev/null) || cstatus="not found"
+        echo "    $container: $cstatus"
+    done
+done
 
 TOTAL=$(jq 'length' "$MATRIX_FILE")
 [[ "$TOTAL" -gt 0 ]] || die "matrix is empty"
@@ -154,6 +199,7 @@ echo "matrix:       $MATRIX_FILE ($TOTAL entries)"
 echo "results:      $RUN_DIR/"
 echo "timeout:      $TIMEOUT"
 echo "test runner:  $SSH_TARGET"
+echo "chain hosts:  ${CHAIN_HOSTS[*]:-<none, container logs will not be collected>}"
 echo "ev-node:      $EV_NODE_DIR (on test runner)"
 echo "rpc:          $BENCH_ETH_RPC_URL"
 echo "ev-reth tag:  $RETH_TAG"
@@ -320,6 +366,9 @@ for i in $(seq 0 $((TOTAL - 1))); do
     else
         echo "  warning: no result file written"
     fi
+
+    # collect ev-reth and ev-node container logs from chain hosts
+    collect_chain_logs "${RUN_DIR}/${TEST_NAME}_${OBJECTIVE}_${TIMESTAMP}"
 
     echo ""
 

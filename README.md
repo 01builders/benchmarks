@@ -113,6 +113,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # gas burner
 ./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -121,6 +124,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # erc20 throughput
 ./scripts/bench-matrix.sh TestERC20Throughput matrices/erc20-throughput.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -129,6 +135,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # defi simulation (longer timeout for high-utilization configs)
 ./scripts/bench-matrix.sh TestDeFiSimulation matrices/defi-simulation.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -138,6 +147,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # state pressure
 ./scripts/bench-matrix.sh TestStatePressure matrices/state-pressure.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -146,6 +158,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # smoke test
 ./scripts/bench-matrix.sh TestSpamoorSmoke matrices/spamoor-smoke.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -158,6 +173,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # run only the first entry to verify config changes
 ./scripts/bench-matrix.sh TestDeFiSimulation matrices/defi-simulation.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
@@ -166,6 +184,9 @@ All commands assume running from the orchestrator (`/srv/benchmarking-runner/ben
 # run first 3 entries with pauses between runs
 ./scripts/bench-matrix.sh TestGasBurner matrices/gas-burner.json \
   --test-runner stg-benchmarking-evstack-evm-node-4 \
+  --chain-host stg-benchmarking-evstack-evm-node-1 \
+  --chain-host stg-benchmarking-evstack-evm-node-2 \
+  --chain-host stg-benchmarking-evstack-evm-node-3 \
   --env-file .env \
   --ansible-playbook ../ansible/play_benchmarks.yml \
   --ansible-inventory ../ansible/inventory/hosts.yml \
