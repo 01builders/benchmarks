@@ -132,10 +132,19 @@ collect_chain_logs() {
     fi
     echo "  collecting container logs..."
     for host in "${CHAIN_HOSTS[@]}"; do
-        for container in ev-reth ev-node; do
-            local log_file="${prefix}_${host}_${container}.log"
-            run_on_chain_host "$host" docker logs "$container" > "$log_file" 2>&1 || {
-                echo "  warning: failed to collect $container logs from $host"
+        # find ev-reth and ev-node containers by image name, regardless of
+        # container naming convention (sequencer-1-ev-reth-1, fullnode-ev-reth-1, etc.)
+        for service in ev-reth ev-node; do
+            local cname
+            cname=$(run_on_chain_host "$host" \
+                docker ps -a --filter "name=${service}" --format "'{{.Names}}'" 2>/dev/null | head -1)
+            if [[ -z "$cname" ]]; then
+                echo "  warning: no $service container found on $host"
+                continue
+            fi
+            local log_file="${prefix}_${host}_${service}.log"
+            run_on_chain_host "$host" docker logs "$cname" > "$log_file" 2>&1 || {
+                echo "  warning: failed to collect $service logs from $host ($cname)"
                 rm -f "$log_file"
             }
         done
@@ -149,11 +158,17 @@ echo "  test runner ($TEST_RUNNER): ok"
 for host in "${CHAIN_HOSTS[@]}"; do
     run_on_chain_host "$host" docker info &>/dev/null || die "cannot reach docker on chain host ($host)"
     echo "  chain host ($host): ok"
-    for container in ev-reth ev-node; do
+    for service in ev-reth ev-node; do
+        cname=$(run_on_chain_host "$host" \
+            docker ps -a --filter "name=${service}" --format "'{{.Names}}'" 2>/dev/null | head -1)
+        if [[ -z "$cname" ]]; then
+            echo "    $service: not found"
+            continue
+        fi
         cstatus=$(run_on_chain_host "$host" docker inspect --format \
             "'{{.State.Status}} | image: {{.Config.Image}} | started: {{.State.StartedAt}}'" \
-            "$container" 2>/dev/null) || cstatus="not found"
-        echo "    $container: $cstatus"
+            "$cname" 2>/dev/null) || cstatus="inspect failed"
+        echo "    $service ($cname): $cstatus"
     done
 done
 
