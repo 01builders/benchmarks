@@ -288,6 +288,25 @@ the current test suite has significant gaps that limit the evaluation:
 
 11. **scrape interval sensitivity** — all tests use a fixed ratio (block_time / 4 or / 5). testing with mismatched ratios (e.g., 25ms scrape at 500ms block time, or 100ms scrape at 100ms block time) would quantify the actual impact.
 
+## coverage gaps
+
+### fullnode sync and validation not measured
+
+all benchmarks target the sequencer directly (`BENCH_ETH_RPC_URL=http://stg-benchmarking-evstack-evm-node-1:8545`). the three fullnodes in the cluster are running but not exercised by the test harness. this means:
+
+- **fullnode block sync latency under load** is unknown — how quickly do fullnodes receive and validate blocks when the sequencer is under heavy tx pressure?
+- **read query performance across the cluster** is untested — no benchmark queries fullnodes for block data, receipts, or state
+- **end-to-end system behavior** through the Hetzner load balancer (`10.17.0.11:8545`) is not captured
+
+the LB is a TCP passthrough that round-robins across all nodes (sequencer + fullnodes). it cannot be used for tx-submission benchmarks because **fullnode tx pools are disconnected from block building**. `eth_sendRawTransaction` calls routed to a fullnode will *succeed* (the RPC method is available, the tx enters the local pool, a tx hash is returned), but in production mode the payload builder only uses transactions from Engine API attributes — the local pool is ignored. there is no tx forwarding, no P2P gossip relay to the sequencer, and no `--tx-forward` flag in ev-reth. transactions sent to fullnodes silently go nowhere, which is worse than an outright rejection for benchmarking: spamoor would report successful sends while actual on-chain throughput drops, producing misleading metrics.
+
+to benchmark through the LB, one of:
+1. **split read/write URLs** — keep tx submission pointed at the sequencer, route read queries through the LB (no code changes, partial coverage)
+2. **add tx forwarding to ev-reth** — fullnodes proxy write RPCs to the sequencer (code change, full coverage)
+3. **reconfigure the LB** — create a write-only LB service targeting only the sequencer (infra change, partial coverage)
+
+until one of these is implemented, all results reflect sequencer-only performance.
+
 ## open questions
 
 1. **what triggers the first ExecuteTxs failure?** the retry logs (`"failed to execute transactions, retrying"`) should contain the error. the error likely comes from `reconcileExecutionAtHeight` (stale ExecMeta, block not found in EL) or `getBlockInfo` (ev-reth temporarily unavailable). capturing this error in the result JSON would help identify whether it's preventable.

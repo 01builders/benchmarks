@@ -1,0 +1,210 @@
+[
+  {
+    "objective": "30m_10pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "4",
+      "BENCH_COUNT_PER_SPAMMER": "3000",
+      "BENCH_THROUGHPUT": "13",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "100",
+      "BENCH_WAIT_TIMEOUT": "15m"
+    }
+  },
+  {
+    "objective": "30m_20pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "4",
+      "BENCH_COUNT_PER_SPAMMER": "5000",
+      "BENCH_THROUGHPUT": "26",
+      "BENCH_WARMUP_TXS": "500",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "150",
+      "BENCH_WAIT_TIMEOUT": "15m"
+    }
+  },
+  {
+    "objective": "30m_40pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "6",
+      "BENCH_COUNT_PER_SPAMMER": "8000",
+      "BENCH_THROUGHPUT": "47",
+      "BENCH_WARMUP_TXS": "800",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "200",
+      "BENCH_WAIT_TIMEOUT": "15m"
+    }
+  },
+  {
+    "objective": "30m_80pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "67",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "30m_100pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "15000",
+      "BENCH_THROUGHPUT": "63",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "30m_120pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "18000",
+      "BENCH_THROUGHPUT": "75",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "100m_10pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "6",
+      "BENCH_COUNT_PER_SPAMMER": "8000",
+      "BENCH_THROUGHPUT": "40",
+      "BENCH_WARMUP_TXS": "800",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "200",
+      "BENCH_WAIT_TIMEOUT": "15m"
+    }
+  },
+  {
+    "objective": "100m_20pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "56",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "15m"
+    }
+  },
+  {
+    "objective": "100m_40pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "20000",
+      "BENCH_THROUGHPUT": "83",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "400",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "100m_80pct",
+    "env": {
+      "BENCH_BLOCK_TIME": "100ms",
+      "BENCH_SLOT_DURATION": "100ms",
+      "BENCH_GAS_LIMIT": "0x5F5E100",
+      "BENCH_SCRAPE_INTERVAL": "25ms",
+      "BENCH_NUM_SPAMMERS": "10",
+      "BENCH_COUNT_PER_SPAMMER": "35000",
+      "BENCH_THROUGHPUT": "167",
+      "BENCH_WARMUP_TXS": "2000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "500",
+      "BENCH_WAIT_TIMEOUT": "30m"
+    }
+  },
+  {
+    "objective": "30m_80pct_250ms",
+    "env": {
+      "BENCH_BLOCK_TIME": "250ms",
+      "BENCH_SLOT_DURATION": "250ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "50ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "67",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "30m_80pct_500ms",
+    "env": {
+      "BENCH_BLOCK_TIME": "500ms",
+      "BENCH_SLOT_DURATION": "500ms",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "100ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "67",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  },
+  {
+    "objective": "30m_80pct_1s",
+    "env": {
+      "BENCH_BLOCK_TIME": "1s",
+      "BENCH_SLOT_DURATION": "1s",
+      "BENCH_GAS_LIMIT": "0x1C9C380",
+      "BENCH_SCRAPE_INTERVAL": "200ms",
+      "BENCH_NUM_SPAMMERS": "8",
+      "BENCH_COUNT_PER_SPAMMER": "12000",
+      "BENCH_THROUGHPUT": "67",
+      "BENCH_WARMUP_TXS": "1000",
+      "BENCH_GAS_UNITS_TO_BURN": "1000000",
+      "BENCH_MAX_WALLETS": "300",
+      "BENCH_WAIT_TIMEOUT": "20m"
+    }
+  }
+]
