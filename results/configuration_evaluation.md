@@ -62,7 +62,7 @@ this configuration is within cadence across all workloads at low-to-moderate uti
 
 1. **it is the fastest viable block time.** the Engine API round-trip (ForkchoiceUpdated → GetPayload → NewPayload → ForkchoiceUpdated) takes 30-43ms minimum even with empty blocks. at 100ms, this leaves 57-70ms for EVM execution — enough for all workloads at low utilization. at 50ms, headroom shrinks to 7-20ms, which is not enough to absorb normal execution variance. 50ms was tested (ERC20, 40% util) and produced 55% non-empty blocks with a 20s stall. sub-50ms is architecturally impossible without replacing the Engine API request/response cycle with a streaming or shared-memory pipeline.
 
-2. **it maximizes throughput at low utilization.** all five workloads achieve their peak within-cadence Mgas/s at 100ms. longer block times (250ms, 500ms, 1s) reduce throughput because ev-reth idles between blocks. at 100ms with 30M gas limit: GasBurner achieves 148 Mgas/s, StatePressure 74, MixedWorkload 70, DeFi 23-33, ERC20 28.
+2. **it maximizes throughput.** all five workloads achieve their peak within-cadence Mgas/s at 100ms. 10 blocks/s means more opportunities to include gas per second than 4 (250ms) or 1 (1s). this advantage holds at all utilization levels — MixedWorkload at 80% util: 116 Mgas/s at 100ms vs 89 at 250ms vs 47 at 500ms vs 21 at 1s. at 100ms with 30M gas limit: GasBurner achieves 148 Mgas/s, StatePressure 74, MixedWorkload 70, DeFi 23-33, ERC20 28.
 
 3. **it provides the lowest confirmation latency.** users see transactions included in ~100ms vs 250ms-1s at longer intervals. for interactive applications (wallets, DEX trading, gaming), this is a meaningful UX difference.
 
