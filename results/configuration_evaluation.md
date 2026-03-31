@@ -7,7 +7,20 @@ cross-workload performance analysis with deployment recommendations.
 **platform:** linux/amd64, 8 vCPU (x86_64), 15 GiB RAM
 **host:** stg-benchmarking-evstack-evm-node-1 (sequencer role)
 **state:** near-genesis (fresh chain, minimal trie depth)
-**total results:** 68 JSON files across 5 workload types
+
+### data summary
+
+70 benchmark runs across 5 workload types were used to produce these recommendations:
+
+| test | runs | raw results |
+|------|------|-------------|
+| DeFiSimulation | 21 | [evreth-v0.3.0-beta_evnode-v1.0.0/](evreth-v0.3.0-beta_evnode-v1.0.0/) |
+| StatePressure | 13 | [evreth-v0.3.0-beta_evnode-v1.0.0/](evreth-v0.3.0-beta_evnode-v1.0.0/) |
+| MixedWorkload | 13 | [evreth-v0.3.0-beta_evnode-v1.0.0/](evreth-v0.3.0-beta_evnode-v1.0.0/) |
+| GasBurner | 12 | [evreth-latest_evnode-unknown/](evreth-latest_evnode-unknown/) |
+| ERC20Throughput | 11 | [evreth-latest_evnode-v1.0.0/](evreth-latest_evnode-v1.0.0/) |
+
+each result is a JSON file containing the full config, metrics, block range, and field descriptions. see [extended_results.md](extended_results.md) for a tabular summary of all 70 runs.
 
 ## glossary
 
@@ -155,7 +168,7 @@ validated by MixedWorkload: `30m_80pct_250ms` produced 88.6 Mgas/s, 164 TPS, wit
 
 ### recommended scenario per test
 
-all CI scenarios use 100ms / 30M (profile 1) to catch regressions at the standard configuration.
+all CI scenarios use 100ms / 30M (profile 1) to catch regressions at the standard configuration. see [recommended_bench_configs.md](recommended_bench_configs.md) for the full `BENCH_*` environment variables per test.
 
 | test | scenario | spammers | pass criteria | rationale |
 |------|----------|----------|--------------|-----------|
