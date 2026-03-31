@@ -57,6 +57,8 @@ ProduceBlock (ev-node)
         └── Engine.ForkchoiceUpdated    — finalize (set head/safe/finalized)
 ```
 
+**empty block timing:** ev-reth has a fast path that skips the state trie walk for empty blocks (reuses parent state root). across 52 runs with empty blocks, the median produce_block_min was **5.8ms** (GetPayload ~0.85ms, NewPayload ~1.1ms, ev-node orchestration ~3-4ms). the remaining ev-node cost is RPC calls (2x GetBlockByNumber, 2x ForkchoiceUpdated), store operations, and batch retrieval.
+
 ## default configuration
 
 for most deployments, use:
@@ -73,7 +75,7 @@ this configuration is within cadence across all workloads at low-to-moderate uti
 
 100ms is used as the default because it sits at the intersection of three constraints:
 
-1. **it is the fastest viable block time.** the Engine API round-trip (ForkchoiceUpdated → GetPayload → NewPayload → ForkchoiceUpdated) takes 30-43ms minimum even with empty blocks. at 100ms, this leaves 57-70ms for EVM execution — enough for all workloads at low utilization. at 50ms, headroom shrinks to 7-20ms, which is not enough to absorb normal execution variance. 50ms was tested (ERC20, 40% util) and produced 55% non-empty blocks with a 20s stall. sub-50ms is architecturally impossible without replacing the Engine API request/response cycle with a streaming or shared-memory pipeline.
+1. **it is the fastest viable block time.** empty blocks complete in ~5-6ms (ev-reth ~1.5ms, ev-node orchestration ~3-4ms), but the average across all blocks is 30-75ms depending on workload and utilization. at 100ms, this leaves 25-70ms average headroom for EVM execution — enough for all workloads at low utilization. at 50ms, average headroom shrinks to near zero for non-trivial workloads. 50ms was tested (ERC20, 40% util) and produced 55% non-empty blocks. sub-50ms may be viable for very low utilization but has not been validated.
 
 2. **it maximizes throughput.** all five workloads achieve their peak within-cadence Mgas/s at 100ms. 10 blocks/s means more opportunities to include gas per second than 4 (250ms) or 1 (1s). this advantage holds at all utilization levels — MixedWorkload at 80% util: 116 Mgas/s at 100ms vs 89 at 250ms vs 47 at 500ms vs 21 at 1s. at 100ms with 30M gas limit: GasBurner achieves 148 Mgas/s, StatePressure 74, MixedWorkload 70, DeFi 23-33, ERC20 28.
 
@@ -195,7 +197,7 @@ block time is the primary lever for trading latency against stability.
 
 | block time | blocks/s | confirmation latency | what happens |
 |-----------|----------|---------------------|-------------|
-| 100ms | 10 | ~100ms | fastest confirmation. pb_avg is 30-75ms depending on workload, leaving 25-70ms headroom. within cadence for all workloads at low utilization. as blocks get fuller, ev-reth needs more time for EVM execution and state root computation. small-tx workloads (ERC20, DeFi) fall behind cadence first because they require many txs per block |
+| 100ms | 10 | ~100ms | fastest confirmation. pb_avg across all blocks (empty and non-empty) is 30-75ms depending on workload, leaving 25-70ms average headroom. within cadence for all workloads at low utilization. as blocks get fuller, ev-reth needs more time for EVM execution and state root computation. small-tx workloads (ERC20, DeFi) fall behind cadence first because they require many txs per block |
 | 250ms | 4 | ~250ms | keeps MixedWorkload and DeFi within cadence through 80% target utilization. ev-reth has 2.5x more time per block to build and validate. ERC20 remains marginal |
 | 500ms | 2 | ~500ms | first interval where ERC20 is fully within cadence. all workloads within cadence. blocks are larger and better-packed. the system idles between blocks, so Mgas/s decreases compared to 100ms despite blocks containing more gas each |
 | 1s | 1 | ~1s | all workloads within cadence at all utilization levels. highest per-block gas, lowest Mgas/s. 75-99% non-empty blocks |
@@ -265,7 +267,7 @@ optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_ti
 - **100M gas limit performs 3-4x worse than 30M** at every utilization level. filling 10% of 100M requires ~3.3x more txs than 10% of 30M. the test matrix achieves this by adding spammers (8 for 100m_10pct vs 4 for 30m_10pct), saturating the RPC pool.
 - **highest TPS of any workload** (703 at 30m_10pct) because each tx uses the least gas.
 - **block time sweep: 500ms is the first fully within-cadence interval.** 250ms is marginal. 1s is within cadence but low throughput (6 Mgas/s, 146 TPS).
-- **50ms block time is not viable.** tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. the Engine API round-trip alone consumes 30-43ms, leaving insufficient headroom.
+- **50ms block time is not viable.** tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. the Engine API round-trip averages 30-43ms across all blocks (empty and non-empty), leaving insufficient headroom.
 
 ### DeFi / Uniswap V2 (~60-90k gas/tx)
 
