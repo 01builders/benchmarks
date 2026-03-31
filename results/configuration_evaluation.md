@@ -74,6 +74,18 @@ the tradeoff: 100ms falls behind cadence at higher utilization for small-tx work
 
 ## recommended configurations by workload
 
+### by expected traffic type
+
+| expected activity | block time | gas limit | scrape interval | profile | rationale |
+|-------------------|-----------|-----------|----------------|---------|-----------|
+| mostly ERC20 transfers | 250ms | 30M | 50ms | 2 | ERC20 is only within cadence at 100ms up to ~10% util. 250ms gives headroom for the high tx count per block |
+| mostly DeFi (swaps, LP) | 100ms | 30M | 25ms | 1 | DeFi is within cadence at 100ms up to ~40% util. 30M is optimal — 100M performs worse for small txs |
+| mix of DeFi + ERC20 transfers | 250ms | 30M | 50ms | 2 | ERC20 is the bottleneck in mixed traffic. MixedWorkload (40% ERC20, 30% DeFi, 20% compute, 10% storage) is within cadence at 100ms through 40%, but 250ms provides margin for ERC20-heavy bursts |
+| mix with significant compute/storage (≥30% large txs) | 100ms | 100M | 25ms | 5 | large txs (1M+ gas) benefit from bigger blocks. MixedWorkload at 100M achieves 245 Mgas/s vs 70 at 30M. cliff is sharp — only viable up to ~10% target util at 100M |
+| compute-heavy (batch ops, rollup proving) | 100ms | 100M | 25ms | 5 | GasBurner/StatePressure within cadence at 100ms across all utilization. 100M gives 3-4x throughput over 30M |
+| storage-heavy (state growth, heavy writes) | 100ms | 100M | 25ms | 5 | StatePressure at 100M achieves 291 Mgas/s vs 74 at 30M. within cadence through 120% target util |
+| unknown / general purpose | 100ms | 30M | 25ms | 1 | safe default. within cadence for all workloads at low util. increase block time if blocks consistently fill >20% |
+
 ### deployment profiles
 
 | profile | use case | avg util | peak util | block time | gas limit | scrape interval |
