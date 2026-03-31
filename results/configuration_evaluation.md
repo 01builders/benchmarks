@@ -327,13 +327,3 @@ these benchmarks run against **near-genesis state** on modest hardware (8 vCPU, 
 the approaches are complementary, not competing: Base prioritizes per-block capacity for high gas throughput, ev-node prioritizes fast confirmation for interactive applications. a chain using ev-node could adopt Base-like parameters (larger gas limit, longer block time) if throughput matters more than latency — profile 4 (1s / 30M) and profile 5 (100ms / 100M) move in that direction.
 
 **Arbitrum is the most structurally comparable L2** (32M gas limit, 250ms blocks). ev-node at profile 1 exceeds Arbitrum's ~60 Mgas/s, but on near-genesis state. all throughput and latency advantages in the comparison table above are attributable to near-genesis state until tested against comparable state depth.
-
-## coverage gaps and open questions
-
-- **state growth:** all results are from near-genesis. state root computation in `builder.finish()` scales with trie depth. quantifying degradation with state accumulation is the most important open question for production sizing.
-- **fullnode sync latency:** all benchmarks target the sequencer directly. fullnode block sync and read query performance under load are untested.
-- **sustained load:** tests run 60-700s. 30-60 minute runs would reveal memory leaks and GC pressure.
-- **hardware scaling:** all results from 8 vCPU / 15 GiB. 4 vCPU and 16 vCPU profiles not tested.
-- **run-to-run variance:** DeFi showed up to 2.2x variance on identical configs. 3+ runs per config with median selection would improve confidence.
-- **utilization divergence at high concurrency:** at 6+ spammers, actual utilization collapses well below target. likely tx pool contention or RPC saturation, not a chain limitation.
-
