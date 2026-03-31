@@ -90,6 +90,8 @@ profile 5 is for chains dominated by large-tx activity (batch operations, storag
 
 #### profile 1 (100ms / 30M) — default
 
+at ~10% target utilization:
+
 | workload | Mgas/s | TPS | cadence |
 |----------|--------|-----|---------|
 | GasBurner | 148 | 150 | within |
@@ -97,6 +99,17 @@ profile 5 is for chains dominated by large-tx activity (batch operations, storag
 | MixedWorkload | 70 | 109 | within |
 | DeFi | 23-33 | 285-373 | within |
 | ERC20 | 28 | 703 | within |
+
+at ~40% target utilization (still 100ms / 30M):
+
+| workload | Mgas/s | TPS | cadence |
+|----------|--------|-----|---------|
+| StatePressure | 191 | 183 | within |
+| MixedWorkload | 135 | 289 | within |
+| DeFi | 3.5 | 84 | within (1 of 2 runs stalled) |
+| ERC20 | — | — | behind (stalled) |
+
+profile 1 remains within cadence at 40% for compute/storage-heavy and mixed workloads. ERC20-dominated chains should move to profile 2 (250ms) above ~10% utilization.
 
 #### profile 2 (250ms / 30M)
 
@@ -199,7 +212,7 @@ too frequent (e.g., 10ms scrape at 100ms blocks) adds CPU overhead during block 
 
 ## peak within-cadence performance per test
 
-optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_time` and `pb_max < 5000ms`.
+optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_time` and `pb_max < 500ms`.
 
 | test | config | gas limit | block time | Mgas/s | TPS | pb_avg (ms) | headroom (ms) | pb_max (ms) |
 |------|--------|-----------|-----------|--------|-----|-------------|---------------|-------------|
