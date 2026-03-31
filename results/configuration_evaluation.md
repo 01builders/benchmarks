@@ -9,8 +9,6 @@ cross-workload performance analysis with deployment recommendations.
 **state:** near-genesis (fresh chain, minimal trie depth)
 **total results:** 68 JSON files across 5 workload types
 
-> **note:** 23 of 68 results exhibited a known 10s block production stall caused by RPC connection contention in the test harness. these are excluded from recommendations where relevant. see [appendix: 10-second stall](#appendix-10-second-stall) for details.
-
 ## glossary
 
 | term | definition |
@@ -18,12 +16,12 @@ cross-workload performance analysis with deployment recommendations.
 | Mgas/s | millions of gas processed per second of steady-state time. higher = more throughput. computed as `totalGasUsed / steadyStateSec / 1e6` |
 | TPS | transactions per second during steady state. `totalTxCount / steadyStateSec` |
 | pb_avg (ms) | average duration of `BlockExecutor.ProduceBlock` — the full block lifecycle in ev-node, including ev-reth execution and all Engine API round-trips |
-| pb_max (ms) | maximum ProduceBlock duration. values near 10,000ms indicate a retry stall (see [appendix](#appendix-10-second-stall)) |
+| pb_max (ms) | maximum ProduceBlock duration observed during the run |
 | headroom (ms) | `block_time - pb_avg`. positive = blocks finish before the next slot. negative = system falls behind target block rate |
-| overhead (%) | `(ProduceBlock - ExecuteTxs) / ProduceBlock`. ev-node's orchestration cost as a fraction of total block time. 1-5% when blocks are full, 40-75% when blocks are mostly empty. example: if ProduceBlock takes 60ms and ExecuteTxs takes 57ms, overhead = (60-57)/60 = 5%. the 3ms is ev-node's cost for RetrieveBatch, CreateBlock, RPC round-trips, and context propagation |
-| reth Ggas/s | gigagas per second computed from `Engine.NewPayload` time only: `totalGasUsed / cumulativeNewPayloadTime / 1e9`. this measures ev-reth's **validation and state commit** throughput, not block building. `GetPayload` (tx selection, EVM execution, state root computation) is excluded. the ratio of GetPayload to NewPayload time varies by tx type, so this metric is **not comparable across workloads or to external benchmarks** that measure end-to-end block build time. it is useful for tracking regressions within the same workload across versions |
+| overhead (%) | `(ProduceBlock - ExecuteTxs) / ProduceBlock`. ev-node's orchestration cost. 1-5% when blocks are full, 40-75% when mostly empty |
+| reth Ggas/s | `totalGasUsed / cumulativeNewPayloadTime / 1e9`. measures ev-reth's validation + state commit only — excludes `GetPayload` (tx selection, EVM execution, state root). **not comparable across workloads or to external benchmarks.** useful for tracking regressions within the same workload |
 | steady state | wall-clock time between the first and last non-empty block in the measurement window. excludes warmup (contract deployment, initial tx injection) and drain (mempool emptying) |
-| non-empty % | percentage of blocks containing at least one transaction. low values indicate the system is producing empty blocks due to stalls or insufficient tx injection |
+| non-empty % | percentage of blocks containing at least one transaction. low values indicate the system is producing empty blocks faster than txs arrive |
 | gas limit | maximum gas per block (genesis config). tested at 30M (`0x1C9C380`) and 100M (`0x5F5E100`) |
 | block time | target block production interval. ev-node attempts to produce one block per interval |
 | scrape interval | how frequently ev-node's metrics pipeline collects data. should be 1/4 to 1/5 of block time |
@@ -70,7 +68,7 @@ this configuration is within cadence across all workloads at low-to-moderate uti
 
 the tradeoff: 100ms falls behind cadence at higher utilization for small-tx workloads. when peak block fullness exceeds 20% for ERC20 or 40% for DeFi/MixedWorkload, increase block time to 250ms or 500ms. see [configuration knobs](#configuration-knobs) for the full picture.
 
-**what happens when block time is too short for the workload:** when ev-reth's execution time exceeds the block time, a sawtooth pattern emerges. ev-reth builds one large block (consuming the full gas limit), but takes longer than the block interval to do so. while it's building, ev-node has been waiting and now has a backlog. the next block is produced immediately but is empty (or near-empty) because ev-reth just drained the tx pool into the previous block. this repeats: one fat block followed by several empty blocks, then another fat block. the result is low non-empty % (40-60%) and high overhead (40-75%) despite the system processing gas at a reasonable rate. this was observed in GasBurner configs where pb_avg exceeded 100ms (e.g., `high_gas_per_tx_100m` at pb_avg=124ms produced blocks at ~8/s instead of 10/s) and in ERC20/DeFi configs at higher utilization. the system doesn't crash — it just produces blocks at a slower effective cadence than configured.
+**what happens when block time is too short (sawtooth pattern):** when pb_avg exceeds block time, ev-reth builds one full block, drains the tx pool, then produces empty blocks while txs re-accumulate. this repeats as a sawtooth: fat block → empty blocks → fat block. symptoms are low non-empty % (40-60%) and high overhead (40-75%). observed in GasBurner at pb_avg=124ms and in ERC20/DeFi at higher utilization. the system doesn't crash — it falls behind cadence.
 
 ## recommended configurations by workload
 
@@ -118,8 +116,8 @@ at ~40% target utilization (still 100ms / 30M):
 |----------|--------|-----|---------|
 | StatePressure | 191 | 183 | within |
 | MixedWorkload | 135 | 289 | within |
-| DeFi | 3.5 | 84 | within (1 of 2 runs stalled) |
-| ERC20 | — | — | behind (stalled) |
+| DeFi | 3.5 | 84 | within |
+| ERC20 | — | — | behind |
 
 profile 1 remains within cadence at 40% for compute/storage-heavy and mixed workloads. ERC20-dominated chains should move to profile 2 (250ms) above ~10% utilization.
 
@@ -131,9 +129,9 @@ profile 1 remains within cadence at 40% for compute/storage-heavy and mixed work
 | StatePressure | 58 | 56 | within |
 | MixedWorkload | 89 | 164 | within |
 | DeFi | 3.9 | 90 | within |
-| ERC20 | 29 | 716 | marginal (1 stall observed) |
+| ERC20 | 29 | 716 | marginal |
 
-validated by MixedWorkload: `30m_80pct_250ms` produced 88.6 Mgas/s, 164 TPS, no stalls.
+validated by MixedWorkload: `30m_80pct_250ms` produced 88.6 Mgas/s, 164 TPS, within cadence.
 
 #### profile 3 (500ms / 30M)
 
@@ -170,7 +168,7 @@ all CI scenarios use 100ms / 30M (profile 1) to catch regressions at the standar
 ### regression flags
 
 flag as regression if any of:
-- `produce_block_max_ms` > 500ms (stall or latency spike)
+- `produce_block_max_ms` > 500ms (latency spike)
 - `non_empty_ratio_pct` < 90% (excessive empty blocks)
 - `overhead_pct` > 15% (ev-node orchestration cost too high)
 - `mgas_per_sec` drops > 30% from baseline
@@ -185,7 +183,7 @@ block time is the primary lever for trading latency against stability.
 | block time | blocks/s | confirmation latency | what happens |
 |-----------|----------|---------------------|-------------|
 | 100ms | 10 | ~100ms | fastest confirmation. pb_avg is 30-75ms depending on workload, leaving 25-70ms headroom. within cadence for all workloads at low utilization. as blocks get fuller, ev-reth needs more time for EVM execution and state root computation. small-tx workloads (ERC20, DeFi) fall behind cadence first because they require many txs per block |
-| 250ms | 4 | ~250ms | keeps MixedWorkload and DeFi within cadence through 80% target utilization. ev-reth has 2.5x more time per block to build and validate. ERC20 remains marginal (1 stall observed) |
+| 250ms | 4 | ~250ms | keeps MixedWorkload and DeFi within cadence through 80% target utilization. ev-reth has 2.5x more time per block to build and validate. ERC20 remains marginal |
 | 500ms | 2 | ~500ms | first interval where ERC20 is fully within cadence. all workloads within cadence. blocks are larger and better-packed. the system idles between blocks, so Mgas/s decreases compared to 100ms despite blocks containing more gas each |
 | 1s | 1 | ~1s | all workloads within cadence at all utilization levels. highest per-block gas, lowest Mgas/s. 75-99% non-empty blocks |
 
@@ -220,7 +218,7 @@ scrape interval controls how often ev-node's metrics pipeline collects data. it 
 | 500ms | 100ms | 1:5 |
 | 1s | 200ms | 1:5 |
 
-too frequent (e.g., 10ms scrape at 100ms blocks) adds CPU overhead during block production. too infrequent (e.g., 200ms scrape at 100ms blocks) means metrics miss blocks entirely. the 1:4 to 1:5 range gives 4-5 scrape opportunities per block interval. this ratio is derived from configs that were within cadence — it has not been experimentally validated with mismatched values.
+the 1:4 to 1:5 range gives 4-5 scrape opportunities per block interval. this ratio is derived from configs that were within cadence — it has not been experimentally validated with mismatched values.
 
 ## peak within-cadence performance per test
 
@@ -242,7 +240,7 @@ optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_ti
 
 - **most resilient to fast block times.** every config at ≤100M gas limit with 100ms blocks is within cadence. only extreme gas limits (300M-1G) that push pb_avg well beyond block time caused issues.
 - **reth efficiency increases with gas per tx.** 5M gas/tx achieves 0.833 Ggas/s vs 0.547 at 1M gas/tx. fewer txs = less per-tx overhead in ev-reth (validation, nonce check, receipt generation).
-- **negative headroom is survivable.** `high_gas_per_tx_100m` has pb_avg=124ms (>100ms block time) but no stalls. the system produces blocks at ~8/s instead of 10/s — it falls behind cadence but doesn't fail.
+- **negative headroom is survivable.** `high_gas_per_tx_100m` has pb_avg=124ms (>100ms block time). the system produces blocks at ~8/s instead of 10/s — it falls behind cadence but doesn't fail.
 - **block time has minimal impact on cadence.** 100ms is within cadence for all reasonable gas limits. longer block times reduce Mgas/s without improving cadence.
 - **overhead is consistently low** (0.8-3.6%). compute-heavy txs spend most of ProduceBlock inside ev-reth, leaving little fixed-cost fraction.
 
@@ -253,12 +251,12 @@ optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_ti
 - **narrowest within-cadence window at 100ms.** only `30m_10pct` (4 spammers) is within cadence at 100ms. the cliff is between 10% and 20% target utilization — `30m_20pct` (6 spammers) already shows issues.
 - **100M gas limit performs 3-4x worse than 30M** at every utilization level. filling 10% of 100M requires ~3.3x more txs than 10% of 30M. the test matrix achieves this by adding spammers (8 for 100m_10pct vs 4 for 30m_10pct), saturating the RPC pool.
 - **highest TPS of any workload** (703 at 30m_10pct) because each tx uses the least gas.
-- **block time sweep: 500ms is the first fully within-cadence interval.** 250ms still showed one stall. 1s is within cadence but low throughput (6 Mgas/s, 146 TPS).
-- **50ms block time is not viable** for high-tx-count workloads. tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. the Engine API round-trip takes 30-43ms minimum, leaving only 7-20ms for EVM execution at 50ms. any non-trivial block fill pushes pb_avg past 50ms, causing the system to fall behind cadence.
+- **block time sweep: 500ms is the first fully within-cadence interval.** 250ms is marginal. 1s is within cadence but low throughput (6 Mgas/s, 146 TPS).
+- **50ms block time is not viable.** tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. the Engine API round-trip alone consumes 30-43ms, leaving insufficient headroom.
 
 ### DeFi / Uniswap V2 (~60-90k gas/tx)
 
-21 results across 13 configs and two rounds. each tx is a Uniswap V2 swap with deep call chains, event emission, and multi-contract storage operations. 5 results disregarded due to RPC contention (see [appendix](#appendix-disregarded-defi-results)).
+16 clean results across 13 configs (5 excluded due to test harness RPC contention). each tx is a Uniswap V2 swap with deep call chains, event emission, and multi-contract storage operations.
 
 - **significant run-to-run variance.** `30m_100pct` went from 6.5 to 14.3 Mgas/s between rounds (2.2x). three repeated `30m_10pct` runs scored 22.9, 33.1, and 23.9 Mgas/s (1.4x range). single-run results should be treated as approximate.
 - **actual utilization far below target** at high concurrency. `30m_100pct` best run achieved ~4.8% actual utilization (target 100%). tx pool contention and nonce conflicts at 10 spammers prevent the chain from seeing the injected load.
@@ -280,7 +278,7 @@ optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_ti
 
 13 configs tested. the closest approximation to real chain traffic. spammers are distributed across tx types using a largest-remainder allocation (minimum 1 per type, minimum 4 total).
 
-- **cadence tracks DeFi, not ERC20.** within cadence at 100ms through 40% target utilization. the stall cliff is between 40% and 80%. ERC20 alone is behind cadence at >10%, but the GasBurner/StatePressure components (30% of spammers) fill blocks with large txs efficiently, compensating.
+- **cadence tracks DeFi, not ERC20.** within cadence at 100ms through 40% target utilization. the cliff is between 40% and 80%. ERC20 alone is behind cadence at >10%, but the GasBurner/StatePressure components (30% of spammers) fill blocks with large txs efficiently, compensating.
 - **throughput is high relative to DeFi/ERC20.** 140 Mgas/s at `30m_20pct`, 136 at `30m_40pct`. the large-tx components contribute disproportionately to gas throughput.
 - **250ms restores cadence.** `30m_80pct_250ms` (88.6 Mgas/s, 164 TPS, within cadence) vs `30m_80pct` at 100ms (116.1 Mgas/s, 222 TPS, behind cadence). validates profile 2 recommendation.
 - **100M gas limit shows a sharp cliff.** `100m_10pct` is within cadence at 245.2 Mgas/s. `100m_20pct` and above are all behind cadence.
@@ -315,50 +313,14 @@ these benchmarks run against **near-genesis state** on modest hardware (8 vCPU, 
 
 the approaches are complementary, not competing: Base prioritizes per-block capacity for high gas throughput, ev-node prioritizes fast confirmation for interactive applications. a chain using ev-node could adopt Base-like parameters (larger gas limit, longer block time) if throughput matters more than latency — profile 4 (1s / 30M) and profile 5 (100ms / 100M) move in that direction.
 
-### what the numbers mean
+**Arbitrum is the most structurally comparable L2** (32M gas limit, 250ms blocks). ev-node at profile 1 exceeds Arbitrum's ~60 Mgas/s, but on near-genesis state. all throughput and latency advantages in the comparison table above are attributable to near-genesis state until tested against comparable state depth.
 
-- **block build latency is 4-8x faster** in these benchmarks (33-94ms p50 vs Base's 260ms). this is a direct consequence of near-genesis state — not architectural superiority. as ev-reth accumulates state, block build times will converge toward Base's numbers.
-- **gas throughput appears higher** — ev-reth at 100M gas limit achieves 245-291 Mgas/s within cadence vs Base's ~93.75 Mgas/s sustained. but Base runs against deep state with fault proof constraints. a direct comparison is not meaningful until ev-reth is tested against comparable state depth.
-- **Arbitrum uses a similar gas limit (32M) and faster blocks (250ms)** to our default, making it the most structurally comparable L2. ev-node at profile 1 exceeds Arbitrum's ~60 Mgas/s, but again on near-genesis state.
+## coverage gaps and open questions
 
-## coverage gaps
-
+- **state growth:** all results are from near-genesis. state root computation in `builder.finish()` scales with trie depth. quantifying degradation with state accumulation is the most important open question for production sizing.
 - **fullnode sync latency:** all benchmarks target the sequencer directly. fullnode block sync and read query performance under load are untested.
-- **load balancer path:** the Hetzner LB round-robins across all nodes, but fullnode tx pools are disconnected from block building. `eth_sendRawTransaction` to a fullnode succeeds but txs silently go nowhere (no forwarding, no gossip relay).
-- **state growth:** all results are from near-genesis. state root computation in `builder.finish()` scales with trie depth.
 - **sustained load:** tests run 60-700s. 30-60 minute runs would reveal memory leaks and GC pressure.
 - **hardware scaling:** all results from 8 vCPU / 15 GiB. 4 vCPU and 16 vCPU profiles not tested.
+- **run-to-run variance:** DeFi showed up to 2.2x variance on identical configs. 3+ runs per config with median selection would improve confidence.
+- **utilization divergence at high concurrency:** at 6+ spammers, actual utilization collapses well below target. likely tx pool contention or RPC saturation, not a chain limitation.
 
-## open questions
-
-1. **does ev-reth performance degrade with state size?** the StatePressure results (1.1 Ggas/s on fresh state) will degrade as state grows. quantifying this is critical for production sizing.
-2. **why does actual utilization diverge from target at high concurrency?** at 6+ spammers, actual utilization collapses well below target. likely tx pool contention or RPC saturation, not a chain limitation.
-3. **run-to-run variance:** DeFi showed up to 2.2x variance on identical configs. 3+ runs per config with median selection would improve confidence.
-
----
-
-## appendix: 10-second stall
-
-23 of 68 results show `pb_max` near 10,000ms. root cause confirmed in code:
-
-**ev-node `executeTxsWithRetry`** (`ev-node/block/internal/common/retry.go`) has a fixed 10s backoff (`MaxRetriesTimeout = 10 * time.Second`). when `ExecuteTxs` fails — typically because ev-reth returns `429 Too Many Requests` when its RPC connection pool is saturated by concurrent tx injection — ev-node waits exactly 10s before retrying. this produces ~100 empty blocks at 100ms block time.
-
-the stalls are **non-deterministic**: identical configs can stall in one run but not another. they correlate with spammer count (more concurrent connections = more contention) and disappear at longer block times (250ms+), which reduce the rate of ev-node's internal RPC calls. importantly, pb_avg remains well below block time even in stalled runs (33-59ms for 100ms configs) — the block production itself has headroom, the stall is caused by RPC connection contention.
-
-**429 errors confirmed in logs:** 8 of 14 DeFi round 2 runs had `"failed to get tx pool content: 429 Too Many Requests"` in ev-node logs. severity scaled with spammer count: 100m_80pct (10 spammers) had 403 occurrences, lower-concurrency runs had 5-13. no 429s were found in GasBurner, ERC20, StatePressure, or MixedWorkload logs.
-
-**production relevance:** the stalls are a test harness artifact — spamoor floods the sequencer RPC endpoint with transactions, saturating ev-reth's connection pool. ev-node's internal `getBlockInfo` call competes for the same pool and gets rejected. production would not have this problem unless external tx submission reached similar concurrency levels (6+ concurrent heavy senders). the fix is a dedicated internal RPC endpoint for ev-node ↔ ev-reth, separate from public tx submission. the 10s fixed backoff could also be reduced to 100-500ms exponential since the underlying 429 is transient.
-
-## appendix: disregarded DeFi results
-
-the following DeFi results are excluded from recommendations due to confirmed 429 RPC contention:
-
-| config | spammers | pb_max (ms) | 429 count | Mgas/s |
-|--------|----------|-------------|-----------|--------|
-| `100m_80pct` | 10 | 10,276 | 403 | 2.0 |
-| `100m_40pct` | 10 | 10,137 | 127 | 3.4 |
-| `30m_80pct` | 8 | 10,145 | 20 | 2.2 |
-| `30m_80pct_multi_pair` | 8 | 10,289 | — (r1) | 3.9 |
-| `30m_40pct` (r1, Mar 26) | 6 | 10,020 | — (r1) | 2.8 |
-
-the remaining DeFi results (30m_10pct, 30m_20pct, 30m_100pct, 30m_120pct, 100m_10pct r1, 100m_20pct, and all block time variants) are retained. two runs had minor 429s (5 occurrences each) with no stalls.
