@@ -306,13 +306,20 @@ these benchmarks run against **near-genesis state** on modest hardware (8 vCPU, 
 | metric | ev-node/ev-reth (benchmark) | Base (production) | Arbitrum One | Optimism |
 |--------|----------------------------|-------------------|-------------|----------|
 | block time | 100ms - 1s | 2s | 250ms | 2s |
-| gas limit | 30M - 100M | 375M | 32M | 30M |
-| gas target | — | 187.5M | 15M | 15M |
-| gas throughput | 28-291 Mgas/s (varies by tx type¹) | ~93.75 Mgas/s sustained | ~60 Mgas/s | ~5.8 Mgas/s |
-| TPS | 109-703 | ~92 | ~21 | ~19 |
-| block build p50 | 33-94ms | 260ms (op-reth) | — | — |
-| execution client | ev-reth (reth fork) | op-reth | Nitro (geth fork) | op-geth |
+| gas limit | 30M - 100M | 375M | 32M | 40M |
+| gas target | — | 62.5M (elasticity=6) | 7M/block (28 Mgas/s speed limit) | 20M (elasticity=2) |
+| gas throughput | 28-291 Mgas/s (varies by tx type¹) | 150 Mgas/s [a] | 28 Mgas/s default, 60 Mgas/s burst [b] | ~10 Mgas/s at target |
+| TPS | 109-703 | ~1500 peak [a] | ~20 [c] | ~20 [c] |
+| block build p50 | 33-94ms | 260ms (op-reth) [d] | — | — |
+| execution client | ev-reth (reth fork) | op-reth [d] | Nitro (geth fork) | op-reth [e] |
 | state depth | near-genesis | billions of txs | billions of txs | billions of txs |
+
+**sources:**
+- [a] [Scaling Base: Doubling Capacity in 30 Days](https://blog.base.dev/scaling-base-doubling-capacity-in-30-days) — 150 Mgas/s capacity, ~1500 TPS peak
+- [b] [ArbOS Dia: Smoother Fees, Higher Throughput](https://blog.arbitrum.io/arbos-dia/) — 28 Mgas/s default gas target, 60 Mgas/s burst over 9s windows
+- [c] [L2Beat Activity Dashboard](https://l2beat.com/scaling/activity) — observed TPS across L2s
+- [d] [Scaling Base With Reth](https://blog.base.dev/scaling-base-with-reth) — block build p50 260ms, sequencer running op-reth
+- [e] [Optimism Execution Client Docs](https://docs.optimism.io/node-operators/guides/configuration/execution-clients) — op-reth is primary execution client
 
 ¹ the 10x range (28-291 Mgas/s) is due to transaction size. large txs (1M+ gas, StatePressure/GasBurner) amortize per-tx overhead and achieve 223-291 Mgas/s. small txs (~65-90k gas, ERC20/DeFi) are dominated by per-tx overhead and achieve 28-33 Mgas/s. production chains with mixed traffic would fall somewhere in between — the MixedWorkload test (40% ERC20, 30% DeFi, 20% GasBurner, 10% StatePressure) achieved 245 Mgas/s because the large-tx components contribute disproportionately to gas throughput.
 
@@ -322,10 +329,10 @@ these benchmarks run against **near-genesis state** on modest hardware (8 vCPU, 
 
 ### different design tradeoffs
 
-> **Base operates with 375M gas limit and 2s block time** — 12.5x our default gas limit and 20x our block time. this produces massive blocks: each block can hold up to 375M gas, with an EIP-1559 target of 187.5M. ev-reth has 2 full seconds to build and validate each block. this is also constrained by fault proof verification time — the block must be provable within the dispute game window.
+> **Base operates with 375M gas limit and 2s block time** — 12.5x our default gas limit and 20x our block time. this produces massive blocks: each block can hold up to 375M gas, with an EIP-1559 target of 62.5M (elasticity=6). ev-reth has 2 full seconds to build and validate each block. this is also constrained by fault proof verification time — the block must be provable within the dispute game window.
 
 **ev-node/ev-reth** at the default config uses 30M gas limit with 100ms blocks — small blocks at fast cadence. the theoretical max is 300M gas/s (30M x 10 blocks/s), but actual throughput is lower because blocks don't fill completely. this optimizes for confirmation latency (100ms vs 2s) at the cost of per-block capacity.
 
 the approaches are complementary, not competing: Base prioritizes per-block capacity for high gas throughput, ev-node prioritizes fast confirmation for interactive applications. a chain using ev-node could adopt Base-like parameters (larger gas limit, longer block time) if throughput matters more than latency — profile 4 (1s / 30M) and profile 5 (100ms / 100M) move in that direction.
 
-**Arbitrum is the most structurally comparable L2** (32M gas limit, 250ms blocks). ev-node at profile 1 exceeds Arbitrum's ~60 Mgas/s, but on near-genesis state. all throughput and latency advantages in the comparison table above are attributable to near-genesis state until tested against comparable state depth.
+**Arbitrum is the most structurally comparable L2** (32M gas limit, 250ms blocks). ev-node at profile 1 exceeds Arbitrum's 28 Mgas/s default target, but on near-genesis state. all throughput and latency advantages in the comparison table above are attributable to near-genesis state until tested against comparable state depth.
