@@ -197,7 +197,7 @@ block time is the primary lever for trading latency against stability.
 
 | block time | blocks/s | confirmation latency | what happens |
 |-----------|----------|---------------------|-------------|
-| 100ms | 10 | ~100ms | fastest confirmation. pb_avg across all blocks (empty and non-empty) is 30-75ms depending on workload, leaving 25-70ms average headroom. within cadence for all workloads at low utilization. as blocks get fuller, ev-reth needs more time for EVM execution and state root computation. small-tx workloads (ERC20, DeFi) fall behind cadence first because they require many txs per block |
+| 100ms | 10 | ~100ms | fastest confirmation. empty blocks complete in <10ms (median 5.8ms from `produce_block_min_ms` across 52 runs). blocks with transactions drive pb_avg to 30-75ms depending on workload, leaving 25-70ms average headroom. within cadence for all workloads at low utilization. as blocks get fuller, ev-reth needs more time for EVM execution and state root computation. small-tx workloads (ERC20, DeFi) fall behind cadence first because they require many txs per block |
 | 250ms | 4 | ~250ms | keeps MixedWorkload and DeFi within cadence through 80% target utilization. ev-reth has 2.5x more time per block to build and validate. ERC20 remains marginal |
 | 500ms | 2 | ~500ms | first interval where ERC20 is fully within cadence. all workloads within cadence. blocks are larger and better-packed. the system idles between blocks, so Mgas/s decreases compared to 100ms despite blocks containing more gas each |
 | 1s | 1 | ~1s | all workloads within cadence at all utilization levels. highest per-block gas, lowest Mgas/s. 75-99% non-empty blocks |
@@ -267,7 +267,7 @@ optimal config per workload, maximizing Mgas/s while ensuring `pb_avg < block_ti
 - **100M gas limit performs 3-4x worse than 30M** at every utilization level. filling 10% of 100M requires ~3.3x more txs than 10% of 30M. the test matrix achieves this by adding spammers (8 for 100m_10pct vs 4 for 30m_10pct), saturating the RPC pool.
 - **highest TPS of any workload** (703 at 30m_10pct) because each tx uses the least gas.
 - **block time sweep: 500ms is the first fully within-cadence interval.** 250ms is marginal. 1s is within cadence but low throughput (6 Mgas/s, 146 TPS).
-- **50ms block time is not viable.** tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. the Engine API round-trip averages 30-43ms across all blocks (empty and non-empty), leaving insufficient headroom.
+- **50ms block time is not viable.** tested once (30m_40pct_50ms): 55% non-empty blocks, 62% overhead. while empty blocks complete in <10ms, blocks with transactions push pb_avg well past 50ms at this utilization level, leaving no headroom.
 
 ### DeFi / Uniswap V2 (~60-90k gas/tx)
 
